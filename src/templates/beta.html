@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://kit.fontawesome.com/29a13740e7.js"></script>
+  <title>Loading Button</title>
+</head>
+
+<body>
+
+<button id="textChangingBtn" type="button" name="button">
+  <div id="innerDiv" class="">
+    THis text will change on button click
+  </div>
+</button>
+
+<script>
+  document.getElementById("textChangingBtn").onclick = function (){
+    document.getElementById("innerDiv").innerHTML = "Processing...";
+  }
+</script>
+
+
+
+
+</body>
+
+</html>
