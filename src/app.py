@@ -12,13 +12,14 @@ from flask import (
     send_from_directory,
     abort,
 )
+from xml.etree import ElementTree as ET
 from util import xml_to_list, list_to_csv, make_name
 
 
 app = Flask(__name__)
-app.config['BASE_DIR'] = os.path.dirname(__file__)
+app.config['BASE_DIR'] = os.path.abspath(os.path.dirname(__file__))
 app.config['UPLOAD_FOLDER'] = os.path.join(app.config['BASE_DIR'], 'uploads')
-app.config['ALLOWED_EXTENSIONS'] = set(['xml'])
+app.config['ALLOWED_EXTENSIONS'] = set(['xml','XML'])
 app.config['MAX_CONTENT_SIZE'] = 16 * 1024 * 1024 # 16 megabytes
 
 
@@ -41,10 +42,9 @@ def verify_filesize(cookies):
 def process_document(as_xml, as_csv):
     """ No error handling has to be done here
     since the function is wrapped in a try/except """
-    # read xml file from directory
-    # xml_to_list()
-    # list_to_csv()
-    # save generated csv
+    tree = ET.parse(as_xml)
+    lists = xml_to_list(tree.getroot())
+    list_to_csv(lists, as_csv)
     # raise NotImplementedError()
     pass
 
@@ -52,34 +52,28 @@ def process_document(as_xml, as_csv):
 @app.route('/', methods=['GET','POST'])
 def index():
     if request.method == 'POST':
-        print(request.files['doc'])
-        if not request.files['doc']:
+        doc = request.files.get('doc', None)
+        if not doc:
             flash('Please select a file', 'info')
             return redirect(url_for('index'))
         else:
-            doc = request.files['doc']
             if not verify_upload(doc.filename) or not verify_filesize(request.cookies):
                 flash('File must have a .xml extension and be less than 16 megabytes', 'danger')
                 return redirect(url_for('index'))
             file_name, file_path = make_name(app.config['UPLOAD_FOLDER'])
             doc.save(file_path + '.xml')
-            print(f'[+] {file_path+".xml"} has been uploaded.') # # DEBUG
+            # print(f'[+] {file_path+".xml"} has been uploaded.') # # DEBUG
             try:
                 process_document(file_path + '.xml', file_path + '.csv')
+                # print(f'[+] {file_path+".csv"} sent for download') # # DEBUG
                 return send_from_directory(app.config['UPLOAD_FOLDER'], filename=file_name + '.xml', as_attachment=True)
             except:
-                flash('Unable to process file, check syntax and try again.', 'info')
+                flash('Unable to process file, check syntax and try again.', 'warning')
                 return redirect(url_for('index'))
             finally:
                 for fl in glob(file_path + '.*'):
-                    # os.remove(fl)
-                    pass
+                    os.remove(fl)
     return render_template('index.html')
-
-
-@app.route('/beta', methods=['GET'])
-def beta():
-    return render_template('beta.html')
 
 
 @app.errorhandler(404)
